@@ -36,12 +36,15 @@ import scraper
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("bot")
+logging.getLogger("httpx").setLevel(logging.WARNING)  # httpx logs would print the bot token
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 TOKEN = os.environ["BOT_TOKEN"]
 OWNER_IDS = {int(x) for x in os.getenv("OWNER_IDS", "").split(",") if x.strip()}
 INTERVAL_MIN = int(os.getenv("INTERVAL_MIN", "30"))
 MAX_AGE_MIN = int(os.getenv("MAX_AGE_MIN", "45"))  # only news published within this window
 TOP_N = int(os.getenv("TOP_N", "10"))  # biggest stories per cycle
+SEND_IMAGES = os.getenv("SEND_IMAGES", "0") == "1"  # photos are OFF by default
 CATEGORIES = {"all", "india", "world", "business", "sports", "crime"}
 CMD_FILTER = filters.UpdateType.MESSAGES | filters.UpdateType.CHANNEL_POSTS
 
@@ -184,7 +187,7 @@ async def run_cycle(context: ContextTypes.DEFAULT_TYPE):
             for chat_id, thread_id, cat in db.subs():
                 if cat == "all" or cat == art.category or cat in art.tags:
                     await _send(context.bot, chat_id, thread_id, text,
-                                art.image, spoiler="crime" in art.tags)
+                                art.image if SEND_IMAGES else "", spoiler="crime" in art.tags)
                     await asyncio.sleep(1.2)  # stay under Telegram flood limits
         # posted stories + their duplicates + too-old pages are done; unpicked fresh ones
         # stay eligible for the next cycle while still inside MAX_AGE_MIN
