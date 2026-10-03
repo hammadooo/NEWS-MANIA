@@ -1,3 +1,24 @@
+# --- self-healing bootstrap: installs requirements if the host skipped the install step ---
+import os
+import subprocess
+import sys
+
+try:
+    import telegram  # noqa: F401
+    import bs4  # noqa: F401
+    import dateutil  # noqa: F401
+except ImportError:
+    _req = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
+    print("Dependencies missing, installing from", _req, flush=True)
+    _cmd = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "-r", _req]
+    try:
+        subprocess.check_call(_cmd)
+    except (subprocess.CalledProcessError, OSError):
+        subprocess.call([sys.executable, "-m", "ensurepip", "--upgrade"])
+        subprocess.check_call(_cmd + ["--break-system-packages"])
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+# --- end bootstrap ---
+
 import asyncio
 import html
 import logging
